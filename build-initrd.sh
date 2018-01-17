@@ -130,10 +130,10 @@ do_chroot $ROOT "apt-get -y dist-upgrade"
 do_chroot $ROOT "apt-get -y install $INCHROOTPKGS --no-install-recommends"
 DEB_HOST_MULTIARCH=`chroot $ROOT dpkg-architecture -q DEB_HOST_MULTIARCH`
 
-cp -a conf/touch ${ROOT}/usr/share/initramfs-tools/conf.d
+cp -a conf/halium ${ROOT}/usr/share/initramfs-tools/conf.d
 cp -a scripts/* ${ROOT}/usr/share/initramfs-tools/scripts
 cp -a hooks/* ${ROOT}/usr/share/initramfs-tools/hooks
-sed -i -e "s/#DEB_HOST_MULTIARCH#/$DEB_HOST_MULTIARCH/g" ${ROOT}/usr/share/initramfs-tools/hooks/touch
+sed -i -e "s/#DEB_HOST_MULTIARCH#/$DEB_HOST_MULTIARCH/g" ${ROOT}/usr/share/initramfs-tools/hooks/halium
 
 VER="$ARCH"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/lib/$DEB_HOST_MULTIARCH"

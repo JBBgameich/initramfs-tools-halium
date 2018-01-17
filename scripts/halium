@@ -13,8 +13,8 @@ tell_kmsg() {
 
 identify_boot_mode() {
 	# Our current list of supported boot modes:
-	## BOOT_MODE = ubuntu and android
-	BOOT_MODE='ubuntu'
+	## BOOT_MODE = halium and android
+	BOOT_MODE='halium'
 
 	# The boot reason is exported via /proc/cmdline
 	# The standard method is using androidboot.mode parameter.
@@ -48,14 +48,14 @@ identify_boot_mode() {
 	tell_kmsg "boot mode: $BOOT_MODE"
 }
 
-set_ubuntu_version_properties() {
-	ubuntu_system=$1
+set_halium_version_properties() {
+	halium_system=$1
 	android_data=$2
 
 	channel_ini=$1/etc/system-image/channel.ini
 	def_language=$1/custom/default_language
 
-	ubuntu="unknown"
+	halium="unknown"
 	device="unknown"
 	custom="unknown"
 	version="unknown"
@@ -67,7 +67,7 @@ set_ubuntu_version_properties() {
 		for i in `grep version_detail $channel_ini | awk -F ' ' '{print $2}'`; do
 			id=${i%=*}
 			case $id in
-				ubuntu) ubuntu=${i#ubuntu=} ;;
+				halium) halium=${i#halium=} ;;
 				device) device=${i#device=} ;;
 				custom) custom=${i#custom=} ;;
 				version) version=${i#version=} ;;
@@ -87,13 +87,13 @@ set_ubuntu_version_properties() {
 	# Write down so the android property system can load them automatically
 	mkdir -p $android_data/property
 	chmod 700 $android_data/property
-	echo -n "$ubuntu" > $android_data/property/persist.ubuntu.version.rootfs
-	echo -n "$device" > $android_data/property/persist.ubuntu.version.device
-	echo -n "$custom" > $android_data/property/persist.ubuntu.version.custom
-	echo -n "$channel" > $android_data/property/persist.ubuntu.version.channel
-	echo -n "$version" > $android_data/property/persist.ubuntu.version
-	echo -n "$def_lang" > $android_data/property/persist.ubuntu.default_language
-	chmod 600 $android_data/property/persist.ubuntu*
+	echo -n "$halium" > $android_data/property/persist.halium.version.rootfs
+	echo -n "$device" > $android_data/property/persist.halium.version.device
+	echo -n "$custom" > $android_data/property/persist.halium.version.custom
+	echo -n "$channel" > $android_data/property/persist.halium.version.channel
+	echo -n "$version" > $android_data/property/persist.halium.version
+	echo -n "$def_lang" > $android_data/property/persist.halium.default_language
+	chmod 600 $android_data/property/persist.halium*
 }
 
 mount_android_partitions() {
@@ -105,8 +105,8 @@ mount_android_partitions() {
 	cat ${fstab} | while read line; do
 		set -- $line
 
-		# stop processing if we hit the "#endubuntu" comment in the file
-		echo $1 | egrep -q "^#endubuntu" && break
+		# stop processing if we hit the "#endhalium" comment in the file
+		echo $1 | egrep -q "^#endhalium" && break
 
 		# Skip any unwanted entry
 		echo $1 | egrep -q "^#" && continue
@@ -135,7 +135,7 @@ mount_android_partitions() {
 	done
 }
 
-mount_ubuntu_overlay() {
+mount_halium_overlay() {
 	source=$1
 	target=$2
 
@@ -401,9 +401,9 @@ mountroot() {
 	identify_boot_mode
 	identify_file_layout
 
-	# If both $imagefile and $syspart are set, something is wrong . The strange
+	# If both $imagefile and $syspart are set, something is wrong. The strange
 	# output from this could be a clue in that situation.
-	tell_kmsg "Ubuntu rootfs is $imagefile $syspart"
+	tell_kmsg "Halium rootfs is $imagefile $syspart"
 
 	# Prepare the root filesystem
 	# NOTE: We mount it read-write in all cases, then remount read-only.
@@ -412,30 +412,42 @@ mountroot() {
 	#       An alternative implementation would be to add losetup support
 	#       to busybox and do the mount in two steps (rw loop, ro fs).
 
-	mkdir -p /ubuntu-system
+	mkdir -p /halium-system
 	mkdir -p /android-rootfs
 	mkdir -p /android-system
 
-	tell_kmsg "mounting system rootfs at /ubuntu-system"
+	tell_kmsg "mounting system rootfs at /halium-system"
 	if [ -n "$syspart" ]; then
-		mount -o rw $syspart /ubuntu-system
+		mount -o rw $syspart /halium-system
 	else
-		mount -o loop,rw $imagefile /ubuntu-system
+		mount -o loop,rw $imagefile /halium-system
+		# If either (android) /data/.writable_image or (on rootfs) 
+		# /.writable_image exist, mount the rootfs as rw
+		if [ -e /tmpmnt/.writable_image ] || [ -e $/halium-system/.writable_image ]; then
+			tell_kmsg "mounting $imagefile (image developer mode)"
+			mountroot_status="$?"
+		else
+			tell_kmsg "mounting $imagefile (user mode)"
+			mount -o remount,ro /halium-system
+			mountroot_status="$?"
+		fi
 	fi
+
+
 
 	# Mount the android system partition to a temporary location
 	mkdir -p /android-system
 	MOUNT="ro"
-	[ -e ${rootmnt}/userdata/.writable_device_image -a -e ${rootmnt}/userdata/.writable_device_image ] && MOUNT="rw"
+	[ -e /tmpmnt/.writable_device_image -a -e /halium-system/.writable_device_image ] && MOUNT="rw"
 	tell_kmsg "mounting android system image $MOUNT"
 	if [ $file_layout = "halium" ]; then
 		# rootfs.img and Android system.img are separate
 		tell_kmsg "mounting android system image from userdata partition"
 		mount -o loop,$MOUNT /tmpmnt/system.img /android-system
 	else
-		# Android system.img is inside Ubuntu image
+		# Android system.img is inside halium image
 		tell_kmsg "mounting android system image from system rootfs"
-		mount -o loop,$MOUNT /ubuntu-system/var/lib/lxc/android/system.img /android-system
+		mount -o loop,$MOUNT /halium-system/var/lib/lxc/android/system.img /android-system
 	fi
 
 	extract_android_ramdisk
@@ -445,15 +457,15 @@ mountroot() {
 		# Bootloader says this is factory or charger mode, boot into Android.
 		tell_kmsg "Android boot mode for factory or charger mode"
 
-		mount /ubuntu-system -o remount,ro
+		mount /halium-system -o remount,ro
 		mount --move /android-rootfs ${rootmnt}
 		mount --move /android-system ${rootmnt}/system
 
 		# Mount all the Android partitions
 		mount_android_partitions "${rootmnt}/fstab*" ${rootmnt}
 
-		mkdir -p ${rootmnt}/ubuntu-system
-		mount --move /ubuntu-system ${rootmnt}/ubuntu-system
+		mkdir -p ${rootmnt}/halium-system
+		mount --move /halium-system ${rootmnt}/halium-system
 
 		# Mounting userdata
 		mkdir -p ${rootmnt}/data
@@ -462,8 +474,8 @@ mountroot() {
 		mkdir -p ${rootmnt}/userdata/android-data
 		mount -o bind ${rootmnt}/userdata/android-data ${rootmnt}/data
 
-		# Set ubuntu version properties
-		set_ubuntu_version_properties ${rootmnt}/ubuntu-system ${rootmnt}/data
+		# Set halium version properties
+		set_halium_version_properties ${rootmnt}/halium-system ${rootmnt}/data
 
 		# Make sure we're booting into android's init
 		ln -s ../init ${rootmnt}/sbin/init
@@ -473,23 +485,13 @@ mountroot() {
 	    # Regular image boot
 		tell_kmsg "Normal boot"
 
-		mount --move /ubuntu-system ${rootmnt}
+		mount --move /halium-system ${rootmnt}
 
-		# If either (android) /data/.writable_image or (on rootfs) 
-		# /.writable_image exist, mount the rootfs as rw
-		if [ -e /tmpmnt/.writable_image ] || [ -e ${rootmnt}/.writable_image ]; then
-			tell_kmsg "mounting $imagefile (image developer mode)"
-			mountroot_status="$?"
-		else
-			tell_kmsg "mounting $imagefile (user mode)"
-			mount -o remount,ro ${rootmnt}
-			mountroot_status="$?"
-		fi
 		mount --move /tmpmnt ${rootmnt}/userdata
 
-		# Set ubuntu version properties
+		# Set halium version properties
 		mkdir -p ${rootmnt}/userdata/android-data
-		set_ubuntu_version_properties ${rootmnt} ${rootmnt}/userdata/android-data
+		set_halium_version_properties ${rootmnt} ${rootmnt}/userdata/android-data
 
 		# Get device information
 		device=$(grep ^ro.product.device= /android-system/build.prop |sed -e 's/.*=//')
@@ -515,11 +517,11 @@ mountroot() {
 		tell_kmsg "moving Android system to /android/system"
 		mount --move /android-system ${rootmnt}/android/system
 
-		# Ubuntu overlay available in the Android system image (hardware specific configs)
-		mount_ubuntu_overlay ${rootmnt}/android/system/ubuntu ${rootmnt}
+		# halium overlay available in the Android system image (hardware specific configs)
+		mount_halium_overlay ${rootmnt}/android/system/halium ${rootmnt}
 
 		# Apply device-specific udev rules
-		if [ ! -f ${rootmnt}/android/system/ubuntu/lib/udev/rules.d/70-android.rules ] && [ "$device" != "unknown" ]; then
+		if [ ! -f ${rootmnt}/android/system/halium/lib/udev/rules.d/70-android.rules ] && [ "$device" != "unknown" ]; then
 			mount --bind ${rootmnt}/usr/lib/lxc-android-config/70-$device.rules ${rootmnt}/lib/udev/rules.d/70-android.rules
 		fi
 
