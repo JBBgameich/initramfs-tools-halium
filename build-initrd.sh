@@ -4,7 +4,7 @@ set -e
 
 export FLASH_KERNEL_SKIP=1
 export DEBIAN_FRONTEND=noninteractive
-DEFAULTMIRROR="http://ftp.debian.org/debian"
+DEFAULTMIRROR="https://deb.debian.org/debian"
 
 usage() {
 	echo "Usage:
@@ -133,7 +133,6 @@ DEB_HOST_MULTIARCH=`chroot $ROOT dpkg-architecture -q DEB_HOST_MULTIARCH`
 cp -a conf/halium ${ROOT}/usr/share/initramfs-tools/conf.d
 cp -a scripts/* ${ROOT}/usr/share/initramfs-tools/scripts
 cp -a hooks/* ${ROOT}/usr/share/initramfs-tools/hooks
-sed -i -e "s/#DEB_HOST_MULTIARCH#/$DEB_HOST_MULTIARCH/g" ${ROOT}/usr/share/initramfs-tools/hooks/halium
 
 VER="$ARCH"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/lib/$DEB_HOST_MULTIARCH"
