@@ -5,16 +5,15 @@ PREREQ=""
 DEB_HOST_MULTIARCH=$(dpkg-architecture -qDEB_HOST_MULTIARCH)
 
 # Output pre-requisites
-prereqs()
-{
-        echo "$PREREQ"
+prereqs() {
+	echo "$PREREQ"
 }
 
 case "$1" in
-    prereqs)
-        prereqs
-        exit 0
-        ;;
+prereqs)
+	prereqs
+	exit 0
+	;;
 esac
 
 . /usr/share/initramfs-tools/hook-functions
