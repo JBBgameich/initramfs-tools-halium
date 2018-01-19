@@ -30,7 +30,7 @@ usb_setup() {
 	write $ANDROID_USB/enable 0
 	write $ANDROID_USB/idVendor 18D1
 	write $ANDROID_USB/idProduct D001
-	write $ANDROID_USB/iManufacturer "UBports initrd"
+	write $ANDROID_USB/iManufacturer "Halium initrd"
 	write $ANDROID_USB/iProduct "I hit a nail"
 	write $ANDROID_USB/iSerial "$1"
 	write $ANDROID_USB/functions $USB_FUNCTIONS
@@ -56,7 +56,7 @@ inject_loop() {
 	echo "########################## inject loop done"
 }
 
-usb_setup "ubports-boot telnet 192.168.2.15: ${REASON}"
+usb_setup "halium-initrd telnet 192.168.2.15: ${REASON}"
 echo "initrd: PANIC for reason: ${REASON}" >/dev/kmsg || true
 
 USB_IFACE=notfound
@@ -69,7 +69,7 @@ fi
 
 # Unable to set up USB interface? Reboot.
 if [ x$USB_IFACE = xnotfound ]; then
-	usb_info "UBports initrd Debug: ERROR: could not setup USB as usb0 or rndis0"
+	usb_info "Halium initrd Debug: ERROR: could not setup USB as usb0 or rndis0"
 	dmesg
 	sleep 60 # plenty long enough to check usb on host
 	reboot -f
