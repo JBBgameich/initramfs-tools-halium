@@ -3,12 +3,12 @@
 BOOT="LNX boot KERNEL"
 
 for i in $BOOT; do
-    path=$(find /dev -name "$i"|grep disk| head -1)
-    [ -n "$path" ] && break
+	path=$(find /dev -name "$i" | grep disk | head -1)
+	[ -n "$path" ] && break
 done
 
-OLDCMDLINE="$(abootimg -i $path|grep cmdline|sed -e 's/^.*cmdline = //') "
-echo $OLDCMDLINE| grep -q "empty cmdline" && OLDCMDLINE=""
+OLDCMDLINE="$(abootimg -i $path | grep cmdline | sed -e 's/^.*cmdline = //') "
+echo $OLDCMDLINE | grep -q "empty cmdline" && OLDCMDLINE=""
 NEWCMDLINE="${OLDCMDLINE}${1}"
 
 abootimg -u $path -c "cmdline=$NEWCMDLINE"

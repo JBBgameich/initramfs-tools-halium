@@ -3,7 +3,7 @@
 # we dont want to run if FLASH_KERNEL_SKIP is set, the ubuntu
 # image build system uses this
 if [ -n "$FLASH_KERNEL_SKIP" ]; then
-    exit 0
+	exit 0
 fi
 
 /usr/sbin/flash-touch-initrd /boot/initrd.img-$1

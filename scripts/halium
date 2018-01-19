@@ -36,7 +36,7 @@ identify_boot_mode() {
 
 	# Krillin
 	if [ -f /sys/class/BOOT/BOOT/boot/boot_mode ]; then
-		boot_reason=`cat /sys/class/BOOT/BOOT/boot/boot_mode`
+		boot_reason=$(cat /sys/class/BOOT/BOOT/boot/boot_mode)
 		case "${boot_reason}" in
 		1) BOOT_MODE="android" ;; # Meta
 		4) BOOT_MODE="android" ;; # Factory
@@ -64,21 +64,21 @@ set_halium_version_properties() {
 
 	if [ -f "$channel_ini" ]; then
 		IFS=','
-		for i in `grep version_detail $channel_ini | awk -F ' ' '{print $2}'`; do
+		for i in $(grep version_detail $channel_ini | awk -F ' ' '{print $2}'); do
 			id=${i%=*}
 			case $id in
-				halium) halium=${i#halium=} ;;
-				device) device=${i#device=} ;;
-				custom) custom=${i#custom=} ;;
-				version) version=${i#version=} ;;
+			halium) halium=${i#halium=} ;;
+			device) device=${i#device=} ;;
+			custom) custom=${i#custom=} ;;
+			version) version=${i#version=} ;;
 			esac
 		done
 		unset IFS
-		channel=`grep channel $channel_ini | awk -F ' ' '{print $2}'`
+		channel=$(grep channel $channel_ini | awk -F ' ' '{print $2}')
 	fi
 
 	if [ -f "$def_language" ]; then
-		lang=`cat $def_language`
+		lang=$(cat $def_language)
 		if [ -n "$lang" ]; then
 			def_lang=$lang
 		fi
@@ -87,12 +87,12 @@ set_halium_version_properties() {
 	# Write down so the android property system can load them automatically
 	mkdir -p $android_data/property
 	chmod 700 $android_data/property
-	echo -n "$halium" > $android_data/property/persist.halium.version.rootfs
-	echo -n "$device" > $android_data/property/persist.halium.version.device
-	echo -n "$custom" > $android_data/property/persist.halium.version.custom
-	echo -n "$channel" > $android_data/property/persist.halium.version.channel
-	echo -n "$version" > $android_data/property/persist.halium.version
-	echo -n "$def_lang" > $android_data/property/persist.halium.default_language
+	echo -n "$halium" >$android_data/property/persist.halium.version.rootfs
+	echo -n "$device" >$android_data/property/persist.halium.version.device
+	echo -n "$custom" >$android_data/property/persist.halium.version.custom
+	echo -n "$channel" >$android_data/property/persist.halium.version.channel
+	echo -n "$version" >$android_data/property/persist.halium.version
+	echo -n "$def_lang" >$android_data/property/persist.halium.default_language
 	chmod 600 $android_data/property/persist.halium*
 }
 
@@ -143,7 +143,7 @@ mount_halium_overlay() {
 		OLD_PWD=$PWD
 		cd ${source}
 
-		for overlay in `find . -type f`; do
+		for overlay in $(find . -type f); do
 			[ -f ${target}/${overlay} ] && mount --bind ${source}/${overlay} ${target}/${overlay}
 		done
 
@@ -159,8 +159,7 @@ sync_dirs() {
 	OLD_PWD=$PWD
 	cd $base
 
-	for file in $source/*
-	do
+	for file in $source/*; do
 		# Skip empty directories
 		[ ! -e "$base/$file" ] && continue
 
@@ -190,18 +189,18 @@ resize_userdata_if_needed() {
 
 	# Partition size in 1k blocks
 	case $path in
-	    /dev/mmcblk*)
-	        pblocks=$(grep ${path#/dev/*} /proc/partitions | awk {'print $3'})
-	        ;;
-	    /dev/disk*)
-	        pblocks=$(grep $(basename $(readlink $path)) /proc/partitions | awk {'print $3'})
-	        ;;
+	/dev/mmcblk*)
+		pblocks=$(grep ${path#/dev/*} /proc/partitions | awk {'print $3'})
+		;;
+	/dev/disk*)
+		pblocks=$(grep $(basename $(readlink $path)) /proc/partitions | awk {'print $3'})
+		;;
 	esac
 	# Filesystem size in 4k blocks
 	fsblocks=$(dumpe2fs -h $path | grep "Block count" | awk {'print $3'})
 	# Difference between the reported sizes in 1k blocks
-	dblocks=$(($pblocks-4*$fsblocks))
-	if [ $dblocks -gt 10000 ];then
+	dblocks=$((pblocks - 4 * fsblocks))
+	if [ $dblocks -gt 10000 ]; then
 		resize2fs -f $path
 		tell_kmsg "resized userdata filesystem to fill $path"
 	fi
@@ -217,7 +216,6 @@ identify_file_layout() {
 	#
 	# = "partition" means the rootfs is located on the device's system partition
 	# and will contain /var/lib/lxc/android/system.img
-
 
 	if [ -e /tmpmnt/ubuntu.img ]; then
 		imagefile=/tmpmnt/ubuntu.img
@@ -245,7 +243,7 @@ process_bind_mounts() {
 	FSTAB=${rootmnt}/etc/fstab
 	touch ${rootmnt}/run/image.fstab
 	mount -o bind ${rootmnt}/run/image.fstab $FSTAB || panic "Could not bind-mount fstab"
-	echo "/dev/root / rootfs defaults,ro 0 0" >> $FSTAB
+	echo "/dev/root / rootfs defaults,ro 0 0" >>$FSTAB
 
 	tell_kmsg "Adding bind-mounts to $FSTAB"
 	# Process the list of bind-mounts
@@ -262,7 +260,7 @@ process_bind_mounts() {
 
 		if [ "$3" = "temporary" ]; then
 			# Temporary entries are simple, just mount a tmpfs
-			echo "tmpfs $1 tmpfs $5 0 0" >> $FSTAB
+			echo "tmpfs $1 tmpfs $5 0 0" >>$FSTAB
 		elif [ "$3" = "persistent" ] || [ "$3" = "synced" ]; then
 			# Figure out the source path
 			if [ "$2" = "auto" ]; then
@@ -304,9 +302,9 @@ process_bind_mounts() {
 
 			# Write the fstab entry
 			if [ "$5" = "none" ]; then
-				echo "$path $1 none bind 0 0" >> $FSTAB
+				echo "$path $1 none bind 0 0" >>$FSTAB
 			else
-				echo "$path $1 none bind,$5 0 0" >> $FSTAB
+				echo "$path $1 none bind,$5 0 0" >>$FSTAB
 			fi
 		else
 			continue
@@ -347,7 +345,7 @@ mountroot() {
 
 	# find the right partition
 	for partname in $partlist; do
-		part=$(find /dev -name $partname|tail -1)
+		part=$(find /dev -name $partname | tail -1)
 		[ -z "$part" ] && continue
 		path=$(readlink -f $part)
 		[ -n "$path" ] && break
@@ -372,12 +370,12 @@ mountroot() {
 	# Mounting and umounting first, let the kernel handle the journal and
 	# orphaned inodes (faster than e2fsck). Then, just run e2fsck forcing -y.
 	# Also check the amount of time used by to check the filesystem.
-	fsck_start=`date +%s`
+	fsck_start=$(date +%s)
 	mount -o errors=remount-ro $path /tmpmnt
 	umount /tmpmnt
-	e2fsck -y $path > /run/initramfs/e2fsck.out 2>&1
-	fsck_end=`date +%s`
-	tell_kmsg "checking filesystem for userdata took (including e2fsck) $((fsck_end-fsck_start)) seconds"
+	e2fsck -y $path >/run/initramfs/e2fsck.out 2>&1
+	fsck_end=$(date +%s)
+	tell_kmsg "checking filesystem for userdata took (including e2fsck) $((fsck_end - fsck_start)) seconds"
 
 	resize_userdata_if_needed ${path}
 
@@ -421,7 +419,7 @@ mountroot() {
 		mount -o rw $syspart /halium-system
 	else
 		mount -o loop,rw $imagefile /halium-system
-		# If either (android) /data/.writable_image or (on rootfs) 
+		# If either (android) /data/.writable_image or (on rootfs)
 		# /.writable_image exist, mount the rootfs as rw
 		if [ -e /tmpmnt/.writable_image ] || [ -e $/halium-system/.writable_image ]; then
 			tell_kmsg "mounting $imagefile (image developer mode)"
@@ -432,8 +430,6 @@ mountroot() {
 			mountroot_status="$?"
 		fi
 	fi
-
-
 
 	# Mount the android system partition to a temporary location
 	mkdir -p /android-system
@@ -453,7 +449,7 @@ mountroot() {
 	extract_android_ramdisk
 
 	# Determine whether we should boot in rootfs or Android mode
-	if ( [ -e $imagefile ] || [ -n "$syspart" ] ) && [ "$BOOT_MODE" = "android" ]; then
+	if ([ -e $imagefile ] || [ -n "$syspart" ]) && [ "$BOOT_MODE" = "android" ]; then
 		# Bootloader says this is factory or charger mode, boot into Android.
 		tell_kmsg "Android boot mode for factory or charger mode"
 
@@ -481,8 +477,8 @@ mountroot() {
 		ln -s ../init ${rootmnt}/sbin/init
 		ln -s ../init ${rootmnt}/sbin/recovery
 		tell_kmsg "booting android..."
-    elif [ -e $imagefile -o -n "$syspart" ]; then
-	    # Regular image boot
+	elif [ -e $imagefile -o -n "$syspart" ]; then
+		# Regular image boot
 		tell_kmsg "Normal boot"
 
 		mount --move /halium-system ${rootmnt}
@@ -494,7 +490,7 @@ mountroot() {
 		set_halium_version_properties ${rootmnt} ${rootmnt}/userdata/android-data
 
 		# Get device information
-		device=$(grep ^ro.product.device= /android-system/build.prop |sed -e 's/.*=//')
+		device=$(grep ^ro.product.device= /android-system/build.prop | sed -e 's/.*=//')
 		[ -z "$device" ] && device="unknown" && tell_kmsg "WARNING: Didn't find a device name. Is the Android system image mounted correctly?"
 		tell_kmsg "device is $device"
 
@@ -530,8 +526,8 @@ mountroot() {
 
 		# Bind-mount /var/lib/ureadahead if available on persistent storage
 		# this is required because ureadahead runs before mountall
-		if [ -e ${rootmnt}/userdata/system-data/var/lib/ureadahead ] && \
-				[ -e ${rootmnt}/var/lib/ureadahead ]; then
+		if [ -e ${rootmnt}/userdata/system-data/var/lib/ureadahead ] &&
+			[ -e ${rootmnt}/var/lib/ureadahead ]; then
 			mount --bind ${rootmnt}/userdata/system-data/var/lib/ureadahead ${rootmnt}/var/lib/ureadahead
 		fi
 
@@ -539,8 +535,7 @@ mountroot() {
 		[ -e ${rootmnt}/userdata/SWAP.img ] && swapon ${rootmnt}/userdata/SWAP.img
 
 		# Apply customized content
-		for user in ${rootmnt}/userdata/user-data/*
-		do
+		for user in ${rootmnt}/userdata/user-data/*; do
 			if [ -d ${rootmnt}/custom/home ] && [ ! -e "$user/.customized" ]; then
 				tell_kmsg "copying custom content tp "
 				cp -Rap ${rootmnt}/custom/home/* "$user/"

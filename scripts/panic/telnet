@@ -1,8 +1,7 @@
 #!/bin/sh
 
 PREREQ=""
-prereqs()
-{
+prereqs() {
 	echo "$PREREQ"
 }
 case $1 in
@@ -20,43 +19,42 @@ EXPLICIT_BUSYBOX="/bin/busybox"
 TELNET_DEBUG_PORT=23
 
 write() {
-  echo -n "$2" > "$1"
+	echo -n "$2" >"$1"
 }
 
 usb_setup() {
-      write $ANDROID_USB/enable        0
-      write $ANDROID_USB/functions     ""
-      write $ANDROID_USB/enable        1
-      usleep 500000 # 0.5 delay to attempt to remove rndis function
-      write $ANDROID_USB/enable        0
-      write $ANDROID_USB/idVendor      18D1
-      write $ANDROID_USB/idProduct     D001
-      write $ANDROID_USB/iManufacturer "UBports initrd"
-      write $ANDROID_USB/iProduct      "I hit a nail"
-      write $ANDROID_USB/iSerial       "$1"
-      write $ANDROID_USB/functions     $USB_FUNCTIONS
-      write $ANDROID_USB/enable        1
+	write $ANDROID_USB/enable 0
+	write $ANDROID_USB/functions ""
+	write $ANDROID_USB/enable 1
+	usleep 500000 # 0.5 delay to attempt to remove rndis function
+	write $ANDROID_USB/enable 0
+	write $ANDROID_USB/idVendor 18D1
+	write $ANDROID_USB/idProduct D001
+	write $ANDROID_USB/iManufacturer "UBports initrd"
+	write $ANDROID_USB/iProduct "I hit a nail"
+	write $ANDROID_USB/iSerial "$1"
+	write $ANDROID_USB/functions $USB_FUNCTIONS
+	write $ANDROID_USB/enable 1
 }
 
 inject_loop() {
-    INJ_DIR=/init-ctl
-    INJ_STDIN=$INJ_DIR/stdin
+	INJ_DIR=/init-ctl
+	INJ_STDIN=$INJ_DIR/stdin
 
-    mkdir $INJ_DIR
-    mkfifo $INJ_STDIN
-    echo "This entire directory is for debugging init - it can safely be removed" > $INJ_DIR/README
+	mkdir $INJ_DIR
+	mkfifo $INJ_STDIN
+	echo "This entire directory is for debugging init - it can safely be removed" >$INJ_DIR/README
 
-    echo "########################## Beginning inject loop"
-    while : ; do
-        while read IN; do
-	    if [ "$IN" = "continue" ]; then break 2;fi
-            $IN
-        done <$INJ_STDIN
-    done
-    rm -rf $INJ_DIR # Clean up if we exited nicely
-    echo "########################## inject loop done"
+	echo "########################## Beginning inject loop"
+	while :; do
+		while read IN; do
+			if [ "$IN" = "continue" ]; then break 2; fi
+			$IN
+		done <$INJ_STDIN
+	done
+	rm -rf $INJ_DIR # Clean up if we exited nicely
+	echo "########################## inject loop done"
 }
-
 
 usb_setup "ubports-boot telnet 192.168.2.15: ${REASON}"
 echo "initrd: PANIC for reason: ${REASON}" >/dev/kmsg || true
@@ -64,25 +62,25 @@ echo "initrd: PANIC for reason: ${REASON}" >/dev/kmsg || true
 USB_IFACE=notfound
 /sbin/ifconfig rndis0 $LOCAL_IP && USB_IFACE=rndis0
 if [ x$USB_IFACE = xnotfound ]; then
-    /sbin/ifconfig usb0 $LOCAL_IP && USB_IFACE=usb0
+	/sbin/ifconfig usb0 $LOCAL_IP && USB_IFACE=usb0
 fi
 # Report for the logs
 /sbin/ifconfig -a
 
 # Unable to set up USB interface? Reboot.
 if [ x$USB_IFACE = xnotfound ]; then
-    usb_info "UBports initrd Debug: ERROR: could not setup USB as usb0 or rndis0"
-    dmesg
-    sleep 60 # plenty long enough to check usb on host
-    reboot -f
+	usb_info "UBports initrd Debug: ERROR: could not setup USB as usb0 or rndis0"
+	dmesg
+	sleep 60 # plenty long enough to check usb on host
+	reboot -f
 fi
 
 # Create /etc/udhcpd.conf file.
-echo "start 192.168.2.20" > /etc/udhcpd.conf
-echo "end 192.168.2.90" >> /etc/udhcpd.conf
-echo "lease_file /var/udhcpd.leases" >> /etc/udhcpd.conf
-echo "interface $USB_IFACE" >> /etc/udhcpd.conf
-echo "option subnet 255.255.255.0" >> /etc/udhcpd.conf
+echo "start 192.168.2.20" >/etc/udhcpd.conf
+echo "end 192.168.2.90" >>/etc/udhcpd.conf
+echo "lease_file /var/udhcpd.leases" >>/etc/udhcpd.conf
+echo "interface $USB_IFACE" >>/etc/udhcpd.conf
+echo "option subnet 255.255.255.0" >>/etc/udhcpd.conf
 
 # Be explicit about busybox so this works in a rootfs too
 echo "########################## starting dhcpd"
@@ -106,4 +104,3 @@ sync
 
 # Run command injection loop = can be exited via 'continue'
 inject_loop
-

@@ -20,15 +20,16 @@ echob() {
 
 while [ $# -gt 0 ]; do
 	case "$1" in
-		-h|--help)
-			usage
-			exit 0
-			;;
-		-a|--arch)
-			[ -n "$2" ] && ARCH=$2 shift || usage
-			;;
-		-m|--mirror)
-			[ -n "$2" ] && MIRROR=$2 shift || usage
+	-h | --help)
+		usage
+		exit 0
+		;;
+	-a | --arch)
+		[ -n "$2" ] && ARCH=$2 shift || usage
+		;;
+	-m | --mirror)
+		[ -n "$2" ] && MIRROR=$2 shift || usage
+		;;
 	esac
 	shift
 done
@@ -43,7 +44,6 @@ done
 # list all packages needed for halium's initrd here
 [ -z $INCHROOTPKGS ] && INCHROOTPKGS="initramfs-tools dctrl-tools e2fsprogs libc6-dev zlib1g-dev libssl-dev busybox-static"
 
-
 BOOTSTRAP_BIN="qemu-debootstrap --arch $ARCH --variant=minbase"
 
 umount_chroot() {
@@ -56,7 +56,7 @@ do_chroot() {
 	trap umount_chroot INT EXIT
 	ROOT="$1"
 	CMD="$2"
-	echob "Executing \"$2\" in chroot" 
+	echob "Executing \"$2\" in chroot"
 	chroot $ROOT mount -t proc proc /proc
 	chroot $ROOT mount -t sysfs sys /sys
 	chroot $ROOT $CMD
@@ -66,27 +66,30 @@ do_chroot() {
 
 # Constants
 
-START_STOP_DAEMON=`cat <<EOF
+START_STOP_DAEMON=$(
+	cat <<EOF
 #!/bin/sh
 echo 1>&2
 echo 'Warning: Fake start-stop-daemon called, doing nothing.' 1>&2
 exit 0
 EOF
-`
+)
 
-POLICY_RC_D=`cat <<EOF
+POLICY_RC_D=$(
+	cat <<EOF
 #!/bin/sh
 exit 101
 EOF
-`
+)
 
-INITCTL=`cat <<EOF
+INITCTL=$(
+	cat <<EOF
 #!/bin/sh
 echo 1>&2
 echo 'Warning: Fake initctl called, doing nothing.' 1>&2
 exit 0
 EOF
-`
+)
 
 if [ ! -e $ROOT/.min-done ]; then
 
@@ -94,7 +97,7 @@ if [ ! -e $ROOT/.min-done ]; then
 
 	# create a plain chroot to work in
 	echob "Creating chroot with arch $ARCH in $ROOT"
-	mkdir build ||true
+	mkdir build || true
 	$BOOTSTRAP_BIN $RELEASE $ROOT $MIRROR || cat $ROOT/debootstrap/debootstrap.log
 
 	#sed -i 's/main$/main universe/' $ROOT/etc/apt/sources.list
@@ -102,10 +105,10 @@ if [ ! -e $ROOT/.min-done ]; then
 
 	# make sure we do not start daemons at install time
 	mv $ROOT/sbin/start-stop-daemon $ROOT/sbin/start-stop-daemon.REAL
-	echo $START_STOP_DAEMON > $ROOT/sbin/start-stop-daemon 
+	echo $START_STOP_DAEMON >$ROOT/sbin/start-stop-daemon
 	chmod a+rx $ROOT/sbin/start-stop-daemon
 
-	echo $POLICY_RC_D > $ROOT/usr/sbin/policy-rc.d
+	echo $POLICY_RC_D >$ROOT/usr/sbin/policy-rc.d
 
 	# after the switch to systemd we now need to install upstart explicitly
 	echo "nameserver 8.8.8.8" >$ROOT/etc/resolv.conf
@@ -128,7 +131,7 @@ fi
 do_chroot $ROOT "apt-get -y update"
 do_chroot $ROOT "apt-get -y dist-upgrade"
 do_chroot $ROOT "apt-get -y install $INCHROOTPKGS --no-install-recommends"
-DEB_HOST_MULTIARCH=`chroot $ROOT dpkg-architecture -q DEB_HOST_MULTIARCH`
+DEB_HOST_MULTIARCH=$(chroot $ROOT dpkg-architecture -q DEB_HOST_MULTIARCH)
 
 cp -a conf/halium ${ROOT}/usr/share/initramfs-tools/conf.d
 cp -a scripts/* ${ROOT}/usr/share/initramfs-tools/scripts

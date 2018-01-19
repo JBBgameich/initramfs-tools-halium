@@ -2,28 +2,27 @@
 
 set -e
 
-apply_diversions()
-{
-        DIR=/usr/share/initramfs-tools
-        SUBDIRS="hooks scripts/local-premount scripts/init-top scripts/init-bottom scripts/panic"
-        FILES="compcache fixrtc dmsetup plymouth console_setup kbd thermal"
+apply_diversions() {
+	DIR=/usr/share/initramfs-tools
+	SUBDIRS="hooks scripts/local-premount scripts/init-top scripts/init-bottom scripts/panic"
+	FILES="compcache fixrtc dmsetup plymouth console_setup kbd thermal"
 
-        for file in $FILES; do
-                for subdir in $SUBDIRS; do
-                        if [ -e $DIR/$subdir/$file ]; then
-                                diversion="$file.$(echo $subdir|sed -e 's/scripts\///'|sed -e 's/-/./').diverted"
-                                dpkg-divert --add --local --divert $DIR/$diversion --rename $DIR/$subdir/$file >/dev/null 2>&1 || true
-                        fi
-                done
-        done
+	for file in $FILES; do
+		for subdir in $SUBDIRS; do
+			if [ -e $DIR/$subdir/$file ]; then
+				diversion="$file.$(echo $subdir | sed -e 's/scripts\///' | sed -e 's/-/./').diverted"
+				dpkg-divert --add --local --divert $DIR/$diversion --rename $DIR/$subdir/$file >/dev/null 2>&1 || true
+			fi
+		done
+	done
 }
 
 if [ "$1" = "configure" ]; then
-        if grep -q "^# UNCONFIGURED FSTAB FOR BASE SYSTEM" /etc/fstab; then
-                cp /usr/share/initramfs-tools-halium/fstab /etc/
-        fi
-        # move bits out of the way that make our initrd to big
-        apply_diversions
+	if grep -q "^# UNCONFIGURED FSTAB FOR BASE SYSTEM" /etc/fstab; then
+		cp /usr/share/initramfs-tools-halium/fstab /etc/
+	fi
+	# move bits out of the way that make our initrd to big
+	apply_diversions
 fi
 
 #DEBHELPER#
