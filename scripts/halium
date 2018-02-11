@@ -11,15 +11,11 @@ tell_kmsg() {
 	echo "initrd: $1" >/dev/kmsg || true
 }
 
-# Redefine panic since we need to do something a bit different
-# Use 'original_panic $MESSAGE' to start panic handlers
-eval "original_$(declare -f panic)"
-
-panic() {
+halium_panic() {
 	# Puts panic reason into kmsg and then starts the panic handlers
 	REASON="$1"
 	tell_kmsg "PANIC for reason: $REASON"
-	original_panic $REASON
+	panic $REASON
 }
 
 identify_boot_mode() {
@@ -253,7 +249,7 @@ process_bind_mounts() {
 	# Prepare the fstab
 	FSTAB=${rootmnt}/etc/fstab
 	touch ${rootmnt}/run/image.fstab
-	mount -o bind ${rootmnt}/run/image.fstab $FSTAB || panic "Could not bind-mount fstab"
+	mount -o bind ${rootmnt}/run/image.fstab $FSTAB ||halium_panic "Could not bind-mount fstab"
 	echo "/dev/root / rootfs defaults,ro 0 0" >>$FSTAB
 
 	tell_kmsg "Adding bind-mounts to $FSTAB"
@@ -377,7 +373,7 @@ mountroot() {
 	fi
 
 	if [ -z "$path" ]; then
-		panic "Couldn't find data partition."
+		halium_panic "Couldn't find data partition."
 	fi
 
 	tell_kmsg "checking filesystem integrity for the userdata partition"
@@ -571,7 +567,7 @@ mountroot() {
 
 	else
 		# Possibly a re-partitioned device
-		panic "Couldn't find a system partition."
+		halium_panic "Couldn't find a system partition."
 	fi
 
 	[ "$quiet" != "y" ] && log_begin_msg "Running /scripts/local-bottom"
