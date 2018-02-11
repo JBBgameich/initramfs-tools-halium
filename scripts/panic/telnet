@@ -31,7 +31,7 @@ usb_setup() {
 	write $ANDROID_USB/idVendor 18D1
 	write $ANDROID_USB/idProduct D001
 	write $ANDROID_USB/iManufacturer "Halium initrd"
-	write $ANDROID_USB/iProduct "I hit a nail"
+	write $ANDROID_USB/iProduct "Failed to boot"
 	write $ANDROID_USB/iSerial "$1"
 	write $ANDROID_USB/functions $USB_FUNCTIONS
 	write $ANDROID_USB/enable 1
