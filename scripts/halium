@@ -11,6 +11,17 @@ tell_kmsg() {
 	echo "initrd: $1" >/dev/kmsg || true
 }
 
+# Redefine panic since we need to do something a bit different
+# Use 'original_panic $MESSAGE' to start panic handlers
+eval "original_$(declare -f panic)"
+
+panic() {
+	# Puts panic reason into kmsg and then starts the panic handlers
+	REASON="$1"
+	tell_kmsg "PANIC for reason: $REASON"
+	original_panic $REASON
+}
+
 identify_boot_mode() {
 	# Our current list of supported boot modes:
 	## BOOT_MODE = halium and android
@@ -335,6 +346,9 @@ mountroot() {
 	run_scripts /scripts/local-premount
 	[ "$quiet" != "y" ] && log_end_msg
 
+	# Put all of this script's output into /dev/kmsg
+	exec &>/dev/kmsg
+
 	# Mount root
 	#
 	# Create a temporary mountpoint for the bindmount
@@ -445,6 +459,8 @@ mountroot() {
 		tell_kmsg "mounting android system image from system rootfs"
 		mount -o loop,$MOUNT /halium-system/var/lib/lxc/android/system.img /android-system
 	fi
+
+	[ $? -eq 0 ] || tell_kmsg "WARNING: Failed to mount Android system.img."
 
 	extract_android_ramdisk
 
