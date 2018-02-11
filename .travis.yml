@@ -38,7 +38,6 @@ deploy:
     - out/initrd.img-touch-amd64
     - out/initrd.img-touch-i386
   on:
-    tags: true
     repo: Halium/initramfs-tools-halium
     branch: halium
   overwrite: true
