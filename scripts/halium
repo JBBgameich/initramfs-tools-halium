@@ -214,20 +214,14 @@ resize_userdata_if_needed() {
 }
 
 identify_file_layout() {
-	# Determine if we have a Halium rootfs.img & system.img or legacy ubuntu.img
+	# Determine if we have a Halium rootfs.img & system.img
 
-	# $file_layout = "ubports" means there is an ubuntu.img which contains an
-	# android system.img at /var/lib/lxc/android/system.img
-	#
-	# = "halium" means there is a separate rootfs.img and system.img on userdata
+	# $file_layout = "halium" means there is a separate rootfs.img and system.img on userdata
 	#
 	# = "partition" means the rootfs is located on the device's system partition
 	# and will contain /var/lib/lxc/android/system.img
 
-	if [ -e /tmpmnt/ubuntu.img ]; then
-		imagefile=/tmpmnt/ubuntu.img
-		file_layout="ubports"
-	elif [ -e /tmpmnt/rootfs.img ]; then
+	if [ -e /tmpmnt/rootfs.img ]; then
 		imagefile=/tmpmnt/rootfs.img
 		file_layout="halium"
 	else
@@ -451,7 +445,7 @@ mountroot() {
 		tell_kmsg "mounting android system image from userdata partition"
 		mount -o loop,$MOUNT /tmpmnt/system.img /android-system
 	else
-		# Android system.img is inside halium image
+		# Android system.img is inside rootfs
 		tell_kmsg "mounting android system image from system rootfs"
 		mount -o loop,$MOUNT /halium-system/var/lib/lxc/android/system.img /android-system
 	fi
@@ -460,7 +454,7 @@ mountroot() {
 
 	extract_android_ramdisk
 
-	# Determine whether we should boot in rootfs or Android mode
+	# Determine whether we should boot to rootfs or Android
 	if ([ -e $imagefile ] || [ -n "$syspart" ]) && [ "$BOOT_MODE" = "android" ]; then
 		# Bootloader says this is factory or charger mode, boot into Android.
 		tell_kmsg "Android boot mode for factory or charger mode"
