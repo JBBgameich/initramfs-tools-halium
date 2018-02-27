@@ -492,8 +492,6 @@ mountroot() {
 
 		mount --move /halium-system ${rootmnt}
 
-		mount --move /tmpmnt ${rootmnt}/userdata
-
 		# Mount some tmpfs
 		mkdir -p ${rootmnt}/android
 		mount -o rw,size=4096 -t tmpfs none ${rootmnt}/android
