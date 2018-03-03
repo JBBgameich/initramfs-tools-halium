@@ -5,14 +5,20 @@ if: tag IS blank
 env: 
   - TRAVIS_TAG=continuous
 
+matrix:
+  include:
+    - env: ARCH=armhf
+    - env: ARCH=arm64
+    - env: ARCH=amd64
+    - env: ARCH=i386
+
 install:
   - echo "deb http://de.archive.ubuntu.com/ubuntu xenial main universe" |sudo tee -a /etc/apt/sources.list
   - sudo apt-get update
   - sudo apt-get install qemu-user-static debootstrap -y
 
 script:
-  - chmod +x ./build-initrd.sh
-  - for i in armhf arm64 amd64 i386; do sudo ./build-initrd.sh -a $i; done
+  - ./build-initrd.sh
 
 before_cache:
   - sudo chown -R travis build/
