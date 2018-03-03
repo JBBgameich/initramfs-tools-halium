@@ -18,7 +18,7 @@ install:
   - sudo apt-get install qemu-user-static debootstrap -y
 
 script:
-  - ./build-initrd.sh
+  - sudo ./build-initrd.sh
 
 before_cache:
   - sudo chown -R travis build/
