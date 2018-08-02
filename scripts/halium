@@ -543,17 +543,17 @@ mountroot() {
 		tell_kmsg "Normal boot"
 
 		mount --move /halium-system ${rootmnt}
-
-		# Mount some tmpfs
 		mkdir -p ${rootmnt}/android
-		mount -o rw,size=4096 -t tmpfs none ${rootmnt}/android
-
-		# Create some needed paths on tmpfs
-		mkdir -p ${rootmnt}/android/data ${rootmnt}/android/system
 
 		# Mounting userdata outside of /android, to avoid having LXC container access it
 		mkdir -p ${rootmnt}/userdata
 		mount --move /tmpmnt ${rootmnt}/userdata
+
+		mount --move /android-rootfs ${rootmnt}/var/lib/lxc/android/rootfs
+		[ $ANDROID_IMAGE_MODE = "system" ] && mount -o rw,size=4096 -t tmpfs none ${rootmnt}/android
+		[ $ANDROID_IMAGE_MODE = "rootfs" ] && mount -o bind ${rootmnt}/var/lib/lxc/android/rootfs ${rootmnt}/android
+
+		mkdir -p ${rootmnt}/android/data ${rootmnt}/android/system
 
 		# Create a fake android data, shared by rootfs and LXC container
 		mkdir -p ${rootmnt}/userdata/android-data
@@ -568,8 +568,6 @@ mountroot() {
 		tell_kmsg "device is $device"
 
 		process_bind_mounts
-
-		mount --move /android-rootfs ${rootmnt}/var/lib/lxc/android/rootfs
 
 		# Mount all the Android partitions
 		mount_android_partitions "${rootmnt}/var/lib/lxc/android/rootfs/fstab*" ${rootmnt}/android
