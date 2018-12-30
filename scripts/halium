@@ -71,8 +71,8 @@ identify_android_image() {
 
 	[ -f /tmpmnt/system.img ] && ANDROID_IMAGE_MODE="system"
 	[ -f /tmpmnt/android-rootfs.img ] && ANDROID_IMAGE_MODE="rootfs"
-	[ -f /tmpmnt/halium-rootfs/var/lib/lxc/android/system.img ] && ANDROID_IMAGE_MODE="system"
-	[ -f /tmpmnt/halium-rootfs/var/lib/lxc/android/android-rootfs.img ] && ANDROID_IMAGE_MODE="rootfs"
+	[ -f /halium-system/var/lib/lxc/android/system.img ] && ANDROID_IMAGE_MODE="system"
+	[ -f /halium-system/var/lib/lxc/android/android-rootfs.img ] && ANDROID_IMAGE_MODE="rootfs"
 	[ -z $ANDROID_IMAGE_MODE ] && ANDROID_IMAGE_MODE="unknown"
 }
 
@@ -402,6 +402,19 @@ mountroot() {
 		[ -n "$path" ] && break
 	done
 
+	# On systems with A/B partition layout, current slot is provided via cmdline parameter.
+	ab_slot_suffix=$(grep -o 'androidboot\.slot_suffix=..' /proc/cmdline |  cut -d "=" -f2)
+	if [ -z "$path" ] && [ ! -z "$ab_slot_suffix" ] ; then
+		tell_kmsg "Searching for A/B data partition on slot $ab_slot_suffix."
+
+		for partname in $partlist; do
+			part=$(find /dev -name "$partname$ab_slot_suffix" | tail -1)
+			[ -z "$part" ] && continue
+			path=$(readlink -f $part)
+			[ -n "$path" ] && break
+		done
+	fi
+
 	# override with a possible cmdline parameter
 	if grep -q datapart= /proc/cmdline; then
 		for x in $(cat /proc/cmdline); do
@@ -441,7 +454,7 @@ mountroot() {
 		for x in $(cat /proc/cmdline); do
 			case ${x} in
 			systempart=*)
-				syspart=${x#*=}
+				_syspart=${x#*=}
 				;;
 			esac
 		done
@@ -449,9 +462,6 @@ mountroot() {
 
 	identify_boot_mode
 	identify_file_layout
-	identify_android_image
-
-	[ $ANDROID_IMAGE_MODE = "unknown" ] && tell_kmsg "WARNING: Android system image not found."
 
 	# If both $imagefile and $_syspart are set, something is wrong. The strange
 	# output from this could be a clue in that situation.
@@ -465,8 +475,6 @@ mountroot() {
 	#       to busybox and do the mount in two steps (rw loop, ro fs).
 
 	mkdir -p /halium-system
-	mkdir -p /android-rootfs
-	mkdir -p /android-system
 
 	tell_kmsg "mounting system rootfs at /halium-system"
 	if [ -n "$_syspart" ]; then
@@ -478,6 +486,13 @@ mountroot() {
 		# Rootfs is a directory
 		mount -o bind /tmpmnt/halium-rootfs /halium-system
 	fi
+	
+	# Identify image mode: either "rootfs" or "system"
+	mkdir -p /android-rootfs
+	mkdir -p /android-system
+
+	identify_android_image
+	[ $ANDROID_IMAGE_MODE = "unknown" ] && tell_kmsg "WARNING: Android system image not found."
 
 	# If either (android) /data/.writable_image or (on rootfs)
 	# /.writable_image exist, mount the rootfs as rw
