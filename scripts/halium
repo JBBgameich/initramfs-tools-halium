@@ -170,6 +170,15 @@ mount_android_partitions() {
 		mount $path ${mount_root}/$2 -t $3 -o $4
 	done
 
+	# Provide a bind mount from /cache to /userdata/cache on systems without a dedicated cache partition
+	if [ ! -e ${mount_root}/cache ]; then
+		if [ ! -d ${rootmnt}/userdata/cache ]; then
+			mkdir ${rootmnt}/userdata/cache
+		fi
+		mkdir ${mount_root}/cache
+		mount -o bind ${rootmnt}/userdata/cache ${mount_root}/cache
+	fi
+
 	# Create an appropriate symlink for vendor files
 	if [ ! -e ${mount_root}/vendor ]; then
 		ln -sf system/vendor ${mount_root}/vendor
