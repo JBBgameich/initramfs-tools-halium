@@ -127,6 +127,7 @@ set_halium_version_properties() {
 mount_android_partitions() {
 	fstab=$1
 	mount_root=$2
+	real_userdata=$3
 
 	tell_kmsg "checking fstab $fstab for additional mount points"
 
@@ -172,11 +173,11 @@ mount_android_partitions() {
 
 	# Provide a bind mount from /cache to /userdata/cache on systems without a dedicated cache partition
 	if [ ! -e ${mount_root}/cache ]; then
-		if [ ! -d ${rootmnt}/userdata/cache ]; then
-			mkdir ${rootmnt}/userdata/cache
+		if [ ! -d ${real_userdata}/cache ]; then
+			mkdir ${real_userdata}/cache
 		fi
 		mkdir ${mount_root}/cache
-		mount -o bind ${rootmnt}/userdata/cache ${mount_root}/cache
+		mount -o bind ${real_userdata}/cache ${mount_root}/cache
 	fi
 
 	# Create an appropriate symlink for vendor files
@@ -546,7 +547,7 @@ mountroot() {
 		[ $ANDROID_IMAGE_MODE = "system" ] && mount --move /android-system ${rootmnt}/system
 
 		# Mount all the Android partitions
-		mount_android_partitions "${rootmnt}/fstab*" ${rootmnt}
+		mount_android_partitions "${rootmnt}/fstab*" ${rootmnt} /tmpmnt
 
 		mkdir -p ${rootmnt}/halium-system
 		mount --move /halium-system ${rootmnt}/halium-system
@@ -595,7 +596,7 @@ mountroot() {
 		process_bind_mounts
 
 		# Mount all the Android partitions
-		mount_android_partitions "${rootmnt}/var/lib/lxc/android/rootfs/fstab*" ${rootmnt}/android
+		mount_android_partitions "${rootmnt}/var/lib/lxc/android/rootfs/fstab*" ${rootmnt}/android ${rootmnt}/userdata
 
 		# system is a special case
 		tell_kmsg "moving Android system to /android/system"
