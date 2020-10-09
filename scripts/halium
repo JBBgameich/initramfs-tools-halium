@@ -271,6 +271,9 @@ identify_file_layout() {
 	if [ -e /tmpmnt/rootfs.img ]; then
 		imagefile=/tmpmnt/rootfs.img
 		file_layout="halium"
+	elif [ -e /tmpmnt/ubuntu.img ]; then
+		imagefile=/tmpmnt/ubuntu.img
+		file_layout="legacy"
 	elif [ -d /tmpmnt/halium-rootfs ]; then
 		imagefile=/tmpmnt/halium-rootfs
 		file_layout="subdir"
