@@ -474,6 +474,18 @@ mountroot() {
 		done
 	fi
 
+	# If systempart=slotselect:<partlabel> is provided, try to lookup
+	# existing partlabels and find the right A/B system partition
+	if [ ! -z "$ab_slot_suffix" ] ; then
+		case "$_syspart" in
+			slotselect:*)
+				partname=$(echo "$_syspart" | awk -F":" '{ print $2 }')
+				part=$(find /dev -name "$partname$ab_slot_suffix" | tail -1)
+				_syspart=$(readlink -f $part)
+			;;
+		esac
+	fi
+
 	identify_boot_mode
 	identify_file_layout
 
