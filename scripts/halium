@@ -57,6 +57,19 @@ identify_boot_mode() {
 		esac
 	fi
 
+	# On Android 8+ devices the 'android' boot mode is broken and should be avoided.
+	# This behavior can be overridden with the cmdline flag 'halium_no_avoid_android_mode'
+	# List of API levels and referred Android versions: https://source.android.com/setup/start/build-numbers
+	if ! grep -wq halium_no_avoid_android_mode /proc/cmdline; then
+		api_level=$(sed -n 's/^ro.build.version.sdk=//p' /android-system/build.prop) # e.g. 26 for Android 8.0
+		[ -z "$api_level" ] && api_level=0
+		tell_kmsg "Android system image API level is $api_level"
+		if [ "$BOOT_MODE" = "android" ] && [ $api_level -ge 26 ]; then
+			tell_kmsg "Android 8+ device detected! Rebooting to reset non-standard boot mode..."
+			reboot -f
+		fi
+	fi
+
 	tell_kmsg "boot mode: $BOOT_MODE"
 }
 
@@ -474,7 +487,6 @@ mountroot() {
 		done
 	fi
 
-	identify_boot_mode
 	identify_file_layout
 
 	# If both $imagefile and $_syspart are set, something is wrong. The strange
@@ -540,6 +552,8 @@ mountroot() {
 
 	[ $ANDROID_IMAGE_MODE = "rootfs" ] && mount -o bind $MOUNT_LOCATION/system /android-system
 	[ $ANDROID_IMAGE_MODE = "system" ] && extract_android_ramdisk
+
+	identify_boot_mode
 
 	# Determine whether we should boot to rootfs or Android
 	if ([ -e $imagefile ] || [ -n "$_syspart" ]) && [ "$BOOT_MODE" = "android" ]; then
