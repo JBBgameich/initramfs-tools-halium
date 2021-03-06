@@ -57,7 +57,7 @@ identify_boot_mode() {
 		esac
 	fi
 
-	tell_kmsg "boot mode: $BOOT_MODE"
+	tell_kmsg "Boot mode: $BOOT_MODE"
 }
 
 identify_android_image() {
@@ -74,6 +74,11 @@ identify_android_image() {
 	[ -f /halium-system/var/lib/lxc/android/system.img ] && ANDROID_IMAGE_MODE="system"
 	[ -f /halium-system/var/lib/lxc/android/android-rootfs.img ] && ANDROID_IMAGE_MODE="rootfs"
 	[ -z $ANDROID_IMAGE_MODE ] && ANDROID_IMAGE_MODE="unknown"
+
+	if [ "$ANDROID_IMAGE_MODE" = "unknown" ]; then
+		halium_panic "Could not identify Android system image!"
+	fi
+	tell_kmsg "Android image mode: $ANDROID_IMAGE_MODE"
 }
 
 set_halium_version_properties() {
@@ -262,13 +267,16 @@ identify_file_layout() {
 
 	# $file_layout = "halium" means there is a separate rootfs.img and system.img on userdata
 	#
+	# = "legacy" means there is a separate ubuntu.img on userdata
+	# and will contain /var/lib/lxc/android/system.img
+	#
 	# = "partition" means the rootfs is located on the device's system partition
 	# and will contain /var/lib/lxc/android/system.img
 	#
 	# = "subdir" means the rootfs is located in a folder on the device's userdata partition
 	# and will contain /var/lib/lxc/android/system.img
 
-	if [ -e /tmpmnt/rootfs.img ]; then
+	if [ -e /tmpmnt/rootfs.img ] && [ -e /tmpmnt/system.img ]; then
 		imagefile=/tmpmnt/rootfs.img
 		file_layout="halium"
 	elif [ -e /tmpmnt/ubuntu.img ]; then
@@ -280,6 +288,8 @@ identify_file_layout() {
 	else
 		file_layout="partition"
 	fi
+
+	tell_kmsg "File layout: $file_layout"
 
 }
 
