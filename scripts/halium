@@ -65,8 +65,8 @@ identify_boot_mode() {
 		[ -z "$api_level" ] && api_level=0
 		tell_kmsg "Android system image API level is $api_level"
 		if [ "$BOOT_MODE" = "android" ] && [ $api_level -ge 26 ]; then
-			tell_kmsg "Android 8+ device detected! Rebooting to reset non-standard boot mode..."
-			reboot -f
+			tell_kmsg "Android 8+ device detected! Charging is to be handled by rootfs, continue boot normally"
+			BOOT_MODE='halium'
 		fi
 	fi
 
