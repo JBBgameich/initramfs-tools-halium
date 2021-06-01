@@ -487,6 +487,15 @@ mountroot() {
 		done
 	fi
 
+	ab_slot_suffix=$(grep -o 'androidboot\.slot_suffix=..' /proc/cmdline |  cut -d "=" -f2)
+
+	# On A/B devices, the system partition name ends in a slot suffix.
+	# To allow boot images to remain slot agnostic, check that the systempart
+	# does NOT contain a slot suffix, and add it if so.
+	if [ ! $(echo $_syspart | grep -qe "^.*_[ab]$") ] && [ ! -z "$_syspart" ]; then
+		_syspart="$_syspart$ab_slot_suffix"
+	fi
+
 	identify_file_layout
 
 	# If both $imagefile and $_syspart are set, something is wrong. The strange
