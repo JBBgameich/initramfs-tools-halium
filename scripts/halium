@@ -82,11 +82,31 @@ identify_android_image() {
 	#   * "system" if the image should be mounted at '/android/system/'
 	#   * "unknown" if neither is found
 
-	[ -f /tmpmnt/system.img ] && ANDROID_IMAGE_MODE="system"
-	[ -f /tmpmnt/android-rootfs.img ] && ANDROID_IMAGE_MODE="rootfs"
-	[ -f /halium-system/var/lib/lxc/android/system.img ] && ANDROID_IMAGE_MODE="system"
-	[ -f /halium-system/var/lib/lxc/android/android-rootfs.img ] && ANDROID_IMAGE_MODE="rootfs"
-	[ -z $ANDROID_IMAGE_MODE ] && ANDROID_IMAGE_MODE="unknown"
+	SYSTEM_SEARCH_PATHS="/halium-system/var/lib/lxc/android/system.img"
+	[ "${file_layout}" == "halium" ] && SYSTEM_SEARCH_PATHS="/tmpmnt/system.img ${SYSTEM_SEARCH_PATHS}"
+
+	ROOTFS_SEARCH_PATHS="/halium-system/var/lib/lxc/android/android-rootfs.img"
+	[ "${file_layout}" == "halium" ] && ROOTFS_SEARCH_PATHS="/tmpmnt/android-rootfs.img ${ROOTFS_SEARCH_PATHS}"
+
+	for image in ${SYSTEM_SEARCH_PATHS}; do
+		if [ -f "${image}" ]; then
+			ANDROID_IMAGE_MODE="system"
+			ANDROID_IMAGE="${image}"
+
+			return
+		fi
+	done
+
+	for image in ${ROOTFS_SEARCH_PATHS}; do
+		if [ -f "${image}" ]; then
+			ANDROID_IMAGE_MODE="rootfs"
+			ANDROID_IMAGE="${image}"
+
+			return
+		fi
+	done
+
+	ANDROID_IMAGE_MODE="unknown"
 }
 
 set_halium_version_properties() {
@@ -535,20 +555,14 @@ mountroot() {
 	# Mount the android system partition to a temporary location
 	MOUNT="ro"
 	MOUNT_LOCATION="/android-$ANDROID_IMAGE_MODE"
-	[ $ANDROID_IMAGE_MODE = "system" ] && ANDROID_IMAGE="system.img" || ANDROID_IMAGE="android-rootfs.img"
 	[ -e /tmpmnt/.writable_device_image -o -e /halium-system/.writable_device_image ] && MOUNT="rw"
-	tell_kmsg "mounting android system image (/tmpmnt/$ANDROID_IMAGE) $MOUNT, in $MOUNT_LOCATION ($ANDROID_IMAGE_MODE mode)"
-	if [ $file_layout = "halium" ]; then
-		# rootfs.img and Android system.img are separate
-		tell_kmsg "mounting android system image from userdata partition"
-		mount -o loop,$MOUNT "/tmpmnt/$ANDROID_IMAGE" $MOUNT_LOCATION
+	tell_kmsg "mounting android system image ($ANDROID_IMAGE) $MOUNT, in $MOUNT_LOCATION ($ANDROID_IMAGE_MODE mode)"
+	if [ -n "${ANDROID_IMAGE}" ]; then
+		mount -o loop,$MOUNT "$ANDROID_IMAGE" $MOUNT_LOCATION \
+			|| tell_kmsg "WARNING: Failed to mount Android system.img."
 	else
-		# Android system.img is inside rootfs
-		tell_kmsg "mounting android system image from system rootfs"
-		mount -o loop,$MOUNT "/halium-system/var/lib/lxc/android/$ANDROID_IMAGE" $MOUNT_LOCATION
+		tell_kmsg "WARNING: Unable to mount Android system image as it hasn't been found."
 	fi
-
-	[ $? -eq 0 ] || tell_kmsg "WARNING: Failed to mount Android system.img."
 
 	[ $ANDROID_IMAGE_MODE = "rootfs" ] && mount -o bind $MOUNT_LOCATION/system /android-system
 	[ $ANDROID_IMAGE_MODE = "system" ] && extract_android_ramdisk
