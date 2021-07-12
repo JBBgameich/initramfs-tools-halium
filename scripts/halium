@@ -185,7 +185,7 @@ mount_android_partitions() {
 	done
 
 	# Provide a bind mount from /cache to /userdata/cache on systems without a dedicated cache partition
-	if [ ! -e ${mount_root}/cache ]; then
+	if [ ! -e ${mount_root}/cache ] || ! grep -q "${mount_root}/cache" /proc/mounts; then
 		if [ ! -d ${real_userdata}/cache ]; then
 			mkdir ${real_userdata}/cache
 		fi
